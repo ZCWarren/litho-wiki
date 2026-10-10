@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>计算光刻 Wiki · Computational Lithography</title>
+<meta name="description" content="一场从 Rayleigh 判据到逆光刻与 EUV 的「自由度接力赛」——可互动的计算光刻 Wiki">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='none' stroke='%23e8a33d' stroke-width='8'/><circle cx='50' cy='50' r='14' fill='%23e8a33d'/></svg>">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<header id="topbar">
+  <button id="menu-btn" aria-label="目录">☰</button>
+  <a class="brand" href="#/">计算光刻<span class="dot">·</span>Wiki</a>
+  <span class="tagline">从 Rayleigh 判据到逆光刻与 EUV</span>
+  <a class="gh" href="https://github.com/ZCWarren/litho-wiki" target="_blank" rel="noreferrer">GitHub ↗</a>
+</header>
+<div id="layout">
+  <nav id="sidebar"></nav>
+  <div id="scrim"></div>
+  <main id="main"><div id="content"></div></main>
+</div>
+<script src="content.js"></script>
+<script src="demos.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
