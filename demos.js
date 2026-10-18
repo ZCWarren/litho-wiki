@@ -599,4 +599,104 @@ function mountILT(el) {
   reset();
 }
 
-const DEMOS = { rayleigh: mountRayleigh, abbe: mountAbbe, illum: mountIllum, ilt: mountILT };
+/* ================= Demo 5: 离轴照明（柯勒光路）互动图 ================= */
+function mountKohler(el) {
+  el.innerHTML = `
+    <div class="demo-title">互动 · 离轴照明与物镜光瞳：移动光源，看衍射级次的落点</div>
+    <style>
+      #kohler-path { width:100%; }
+      #kohler-path .field { flex:1; min-width:220px; }
+      #kohler-path .field-head { display:flex; justify-content:space-between; gap:10px; }
+      #kohler-path svg { display:block; width:100%; height:auto; background:var(--bg); border-radius:8px; }
+      #kohler-path svg text { fill:var(--fg); font-size:12px; font-family:var(--mono); }
+      #kohler-path svg .minor { fill:var(--muted); }
+      #kohler-path svg .axis { stroke:var(--border); stroke-width:1.4; stroke-dasharray:5 5; }
+      #kohler-path svg .lens { fill:none; stroke:var(--muted); stroke-width:5; stroke-linecap:round; }
+      #kohler-path svg .source { fill:var(--accent); }
+      #kohler-path svg .zero { fill:none; stroke:#1379a8; stroke-width:3.3; }
+      #kohler-path svg .plus { fill:none; stroke:var(--accent); stroke-width:3.3; }
+      #kohler-path svg .zero-dot { fill:#1379a8; }
+      #kohler-path svg .plus-dot { fill:var(--accent); }
+      #kohler-path svg .stop { stroke:#e06c5b; stroke-width:3; }
+      #kohler-path .kp-values { display:flex; flex-wrap:wrap; gap:8px 20px; margin:10px 0; font-family:var(--mono); font-size:13px; }
+      #kohler-path .kp-values span { white-space:nowrap; color:var(--muted); }
+      #kohler-path .kp-values strong { color:var(--fg); }
+      #kohler-path .kp-result { margin-top:8px; padding:10px 14px; background:var(--panel); border:1px solid var(--border); border-radius:8px; font-size:14px; }
+      #kohler-path .kp-result.pass { border-color:var(--accent); }
+      #kohler-path .kp-result.fail { border-color:#e06c5b; color:#e06c5b; }
+    </style>
+    <div id="kohler-path">
+      <div class="demo-row" style="margin-bottom:12px;">
+        <label class="field ctl" for="kp-source"><span class="field-head"><span>光源从中心向边缘移动</span><strong id="kp-source-val">0.00</strong></span><input class="form-range" type="range" id="kp-source" min="0" max="1" step="0.01" value="0" style="width:100%"></label>
+        <label class="field ctl" for="kp-k"><span class="field-head"><span>半周期对应的 k₁</span><strong id="kp-k-val">0.25</strong></span><input class="form-range" type="range" id="kp-k" min="0.25" max="0.70" step="0.01" value="0.25" style="width:100%"></label>
+      </div>
+      <svg id="kp-svg" viewBox="0 0 760 405" role="img" aria-label="柯勒照明光学系统光路"></svg>
+      <div class="kp-values"><span>入射：<strong id="kp-in"></strong></span><span>+1 级：<strong id="kp-out"></strong></span><span>两束之差：<strong id="kp-gap"></strong></span></div>
+      <div id="kp-result" class="kp-result"></div>
+    </div>
+    <div class="demo-note">蓝：0 级 · 橙：+1 级 · 灰色竖条：物镜光瞳可通过区域 · 光线方向为示意，落点位置按光瞳坐标精确绘制。<br>把 k₁ 调到 0.25 附近（物理极限），再向外推光源——这正是<b>离轴照明</b>让极限分辨率也能成像的几何原理。</div>`;
+
+  const root = el.querySelector('#kohler-path');
+  const source = root.querySelector('#kp-source');
+  const kval = root.querySelector('#kp-k');
+  const svg = root.querySelector('#kp-svg');
+  const cy = 210, scale = 67, xp = 590;
+  const yq = q => cy + scale * q;
+  const num = x => x.toFixed(2);
+  const mark = (x, y, cls, name) => `<circle cx="${x}" cy="${y.toFixed(1)}" r="7" class="${cls}"/><text x="${x + 12}" y="${(y - 10).toFixed(1)}">${name}</text>`;
+
+  function draw() {
+    const a = Number(source.value), k = Number(kval.value);
+    const q0 = -a, delta = 1 / (2 * k), q1 = q0 + delta;
+    const ySource = cy + 42 * a, yMask = cy - 32 * a;
+    const y0 = yq(q0), y1 = yq(q1);
+    const yObj0 = yMask + .39 * (y0 - yMask), yObj1 = yMask + .39 * (y1 - yMask);
+    const passed = q1 <= 1 + 1e-9;
+
+    root.querySelector('#kp-source-val').textContent = num(a);
+    root.querySelector('#kp-k-val').textContent = num(k);
+    root.querySelector('#kp-in').textContent = `sin θin = ${a === 0 ? '0' : `−${num(a)} NA/n`}`;
+    root.querySelector('#kp-out').textContent = `sin θ₁ = ${num(q1)} NA/n`;
+    root.querySelector('#kp-gap').textContent = `sin θ₁ − sin θin = ${num(delta)} NA/n`;
+
+    const resultEl = root.querySelector('#kp-result');
+    resultEl.textContent = passed
+      ? '✓ 0 级和 +1 级都进入物镜：两束光可在晶圆上形成周期像。'
+      : '✗ +1 级落在物镜光瞳外：这两个衍射级无法形成周期像。';
+    resultEl.className = 'kp-result ' + (passed ? 'pass' : 'fail');
+
+    svg.innerHTML = `
+      <defs>
+        <marker id="kp-arrow-0" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#1379a8"/></marker>
+        <marker id="kp-arrow-1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--accent)"/></marker>
+      </defs>
+      <line x1="42" x2="728" y1="${cy}" y2="${cy}" class="axis"/>
+      <text x="10" y="25">光源面</text><text x="132" y="25">照明镜组</text><text x="289" y="25">掩模光栅</text><text x="435" y="25">物镜</text><text x="544" y="25">物镜光瞳</text><text x="690" y="25">晶圆</text>
+      <line x1="60" x2="60" y1="147" y2="273" stroke="var(--border)" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="60" cy="${ySource.toFixed(1)}" r="9" class="source"/>
+      <path d="M153 148 Q177 210 153 272 M162 148 Q186 210 162 272" class="lens"/>
+      <rect x="303" y="158" width="15" height="104" fill="var(--panel)" stroke="var(--border)"/>
+      <path d="M305 158 v104 M312 158 v104" stroke="var(--muted)" stroke-width="4" stroke-dasharray="8 8"/>
+      <path d="M451 146 Q478 210 451 274 M461 146 Q488 210 461 274" class="lens"/>
+      <rect x="${xp - 6}" y="${cy - scale}" width="12" height="${2 * scale}" rx="5" fill="var(--panel)" stroke="var(--border)"/>
+      <line x1="${xp - 6}" x2="${xp + 6}" y1="${cy - scale}" y2="${cy - scale}" stroke="var(--fg)" stroke-width="2"/>
+      <line x1="${xp - 6}" x2="${xp + 6}" y1="${cy + scale}" y2="${cy + scale}" stroke="var(--fg)" stroke-width="2"/>
+      <text x="610" y="${cy - scale - 6}">−NA/n</text><text x="610" y="${cy + scale + 17}">+NA/n</text>
+      <text x="610" y="${cy + 4}" class="minor">0</text>
+      <line x1="60" y1="${ySource.toFixed(1)}" x2="160" y2="${cy}" class="zero"/>
+      <line x1="160" y1="${cy}" x2="310" y2="${yMask.toFixed(1)}" class="zero" marker-end="url(#kp-arrow-0)"/>
+      <path d="M318 ${yMask.toFixed(1)} L460 ${yObj0.toFixed(1)} L${xp - 9} ${y0.toFixed(1)}" class="zero" marker-end="url(#kp-arrow-0)"/>
+      <path d="M318 ${yMask.toFixed(1)} L460 ${yObj1.toFixed(1)} L${xp - 9} ${y1.toFixed(1)}" class="plus" marker-end="url(#kp-arrow-1)"/>
+      ${mark(xp, y0, 'zero-dot', '0 级')}${mark(xp, y1, 'plus-dot', '+1 级')}
+      ${passed
+        ? `<path d="M596 ${y0.toFixed(1)} L705 ${cy}" class="zero"/><path d="M596 ${y1.toFixed(1)} L705 ${cy}" class="plus"/><rect x="709" y="187" width="11" height="46" fill="var(--accent)" opacity=".5"/>`
+        : `<line x1="${xp - 11}" x2="${xp + 11}" y1="${(y1 - 11).toFixed(1)}" y2="${(y1 + 11).toFixed(1)}" class="stop"/><line x1="${xp + 11}" x2="${xp - 11}" y1="${(y1 - 11).toFixed(1)}" y2="${(y1 + 11).toFixed(1)}" class="stop"/><path d="M596 ${y0.toFixed(1)} L705 ${cy}" class="zero"/><rect x="709" y="187" width="11" height="46" fill="var(--panel)"/>`}
+      <text x="13" y="385" class="minor">科勒照明原理：光源面与掩模面共轭，光源上每一点照亮整个掩模；光源的位置决定入射角。</text>`;
+  }
+
+  source.addEventListener('input', draw);
+  kval.addEventListener('input', draw);
+  draw();
+}
+
+const DEMOS = { rayleigh: mountRayleigh, abbe: mountAbbe, illum: mountIllum, ilt: mountILT, kohler: mountKohler };
